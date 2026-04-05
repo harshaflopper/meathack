@@ -1,0 +1,12 @@
+name: llm_memory_optimizer
+description: Simulates an advanced multi-tiered AI Memory Management System (Fast Memory vs Disk) for training robust LLM context offloading.
+version: 2.0.0
+owner: agent
+type: API
+tasks:
+  - name: email_triage_easy
+    description: "Email inbox parsing. Large attention limit but agent must index priority emails."
+  - name: codebase_debugging_medium
+    description: "Multi-file code triage. Extremely tight constraint. Requires active offloading of irrelevant files to find the configuration bug."
+  - name: infinite_incident_response_hard
+    description: "Continuous infinite-horizon anomaly stream. Requires aggressive semantic compression to maintain a functional timeline for root-cause synthesis."
