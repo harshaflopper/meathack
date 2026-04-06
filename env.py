@@ -176,31 +176,31 @@ class MemoryEnvironment:
 
         # Validate action type
         if atype not in VALID_ACTIONS:
-            self.status_message = f"Unknown action: {atype}"
-            reward_value -= 0.1
+            self.status_message = f"Unknown action: {atype}. Valid actions: {', '.join(sorted(VALID_ACTIONS))}"
+            reward_value -= 0.05
             self.decision_log.append(f"INVALID_ACTION: {atype} not recognized.")
             self.is_done = False
-            reward_value = max(0.0, min(1.0, reward_value))
             return (
                 self._get_obs(),
-                reward_value,
+                0.0,  # Clamped: penalty signal is zero reward (not negative)
                 False,
                 {"error": f"Invalid action_type: {atype}"},
             )
 
-        # OOM penalty
+        # OOM penalty — episode does NOT end, agent can still offload/compress
         used_tokens = self._get_tokens_used()
         if used_tokens > self.current_task.attention_capacity:
             reward_value -= 0.2
             self.status_message = (
-                "FATAL: OOM Penalty. Fast memory overflowed. "
-                "Must offload or compress immediately!"
+                "WARNING: OOM — memory overflowed! "
+                "Use 'offload_to_disk' or 'semantic_compress' to free space. "
+                "Episode continues."
             )
 
         # ----- MEMORY MANAGEMENT ACTIONS -----
 
         if atype == "store_in_fast_memory":
-            content = args.get("content", "")
+            content = args.get("content", "") if args else ""
             if content:
                 mem_id = str(uuid.uuid4())[:6]
                 self.fast_memory[mem_id] = content
@@ -222,7 +222,9 @@ class MemoryEnvironment:
                 self.decision_log.append("STORE_FAIL: No content provided.")
 
         elif atype == "offload_to_disk":
-            mem_ids = args.get("fast_memory_ids", [])
+            mem_ids = args.get("fast_memory_ids", []) if args else []
+            if not isinstance(mem_ids, list):
+                mem_ids = []
             moved = 0
             for m in mem_ids:
                 if m in self.fast_memory:
@@ -237,8 +239,10 @@ class MemoryEnvironment:
                 self.decision_log.append("OFFLOAD_FAIL: No valid IDs.")
 
         elif atype == "semantic_compress":
-            mem_ids = args.get("fast_memory_ids", [])
-            summary = args.get("summary", "")
+            mem_ids = args.get("fast_memory_ids", []) if args else []
+            summary = args.get("summary", "") if args else ""
+            if not isinstance(mem_ids, list):
+                mem_ids = []
             valid = [m for m in mem_ids if m in self.fast_memory]
             if len(valid) > 0 and summary:
                 original_size = sum(len(self.fast_memory[m]) for m in valid)
@@ -262,8 +266,8 @@ class MemoryEnvironment:
                 self.decision_log.append("COMPRESS_FAIL: Invalid input.")
 
         elif atype == "retrieve_from_disk":
-            query = args.get("query", "").lower()
-            limit = args.get("limit", 3)
+            query = (args.get("query", "") if args else "").lower()
+            limit = args.get("limit", 3) if args else 3
             results = []
             for k, v in self.disk_storage.items():
                 if query in v.lower():
@@ -286,7 +290,7 @@ class MemoryEnvironment:
         # ----- REAL-WORLD ACTIONS (Step 1) -----
 
         elif atype == "mark_email_important":
-            mem_id = args.get("memory_id", "")
+            mem_id = (args.get("memory_id", "") if args else "")
             if mem_id in self.fast_memory or mem_id in self.disk_storage:
                 content = self.fast_memory.get(mem_id, self.disk_storage.get(mem_id, ""))
                 # Check if this is actually an important email
@@ -315,8 +319,8 @@ class MemoryEnvironment:
                 self.decision_log.append(f"MARK_IMPORTANT_FAIL: {mem_id} not found.")
 
         elif atype == "fix_config":
-            target = args.get("target", "").upper()
-            new_value = args.get("new_value", "")
+            target = (args.get("target", "") if args else "").upper()
+            new_value = (args.get("new_value", "") if args else "")
             if self.config_state:
                 # Check if fixing the right config key
                 bug_key = list(self.config_state.keys())[0] if self.config_state else ""
@@ -359,7 +363,7 @@ class MemoryEnvironment:
                 self.decision_log.append("FIX_CONFIG: No config bugs in task.")
 
         elif atype == "restart_service":
-            svc = args.get("service_name", "")
+            svc = (args.get("service_name", "") if args else "")
             if svc in self.services_status:
                 current_status = self.services_status[svc]
                 if current_status == "fix_pending_restart":
@@ -392,8 +396,8 @@ class MemoryEnvironment:
                 self.decision_log.append(f"RESTART_FAIL: Unknown service '{svc}'.")
 
         elif atype == "escalate_incident":
-            summary = args.get("summary", "")
-            severity = args.get("severity", "medium")
+            summary = (args.get("summary", "") if args else "")
+            severity = (args.get("severity", "medium") if args else "medium")
             if summary:
                 # Escalation is appropriate for hard tasks or when critical issues found
                 is_appropriate = (
@@ -432,8 +436,10 @@ class MemoryEnvironment:
         # ----- FINAL SUBMISSION -----
 
         elif atype == "submit_final_synthesis":
-            answer = args.get("answer", "")
-            j_ids = args.get("justification_ids", [])
+            answer = (args.get("answer", "") if args else "")
+            j_ids = (args.get("justification_ids", []) if args else [])
+            if not isinstance(j_ids, list):
+                j_ids = []
 
             # Verify justification exists in fast or disk
             valid_just = [
@@ -443,12 +449,19 @@ class MemoryEnvironment:
 
             score = self.current_task.grade(answer, valid_just)
 
-            # Add efficiency and memory bonuses
-            eff_bonus = self._efficiency_bonus()
-            mem_bonus = self._memory_optimization_bonus()
+            # Anti-exploit: no valid justification IDs → cap score
+            if not valid_just and score > 0:
+                score = min(score, 0.3)  # Can't get >0.3 without evidence
+                self.decision_log.append(
+                    "SUBMIT_WARNING: No valid justification IDs — score capped at 0.3"
+                )
+
+            # Add efficiency and memory bonuses (only if justified)
+            eff_bonus = self._efficiency_bonus() if valid_just else 0.0
+            mem_bonus = self._memory_optimization_bonus() if valid_just else 0.0
 
             if score == 1.0:
-                reward_value = 1.0
+                reward_value = min(1.0, 1.0 + eff_bonus + mem_bonus)
                 reward_msg = (
                     f"Task Success! Answer verified and justified. "
                     f"Efficiency bonus: {eff_bonus:.2f}, Memory bonus: {mem_bonus:.2f}"

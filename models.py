@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Dict, Any, Optional, List
 
 class Action(BaseModel):
@@ -12,7 +12,7 @@ class Action(BaseModel):
             "escalate_incident, no_op"
         )
     )
-    action_args: Dict[str, Any] = Field(
+    action_args: Optional[Dict[str, Any]] = Field(
         default_factory=dict,
         description="""Arguments for the chosen action:
 - store_in_fast_memory: {'content': '<string data>'}
@@ -27,6 +27,14 @@ class Action(BaseModel):
 - no_op: {}
 """
     )
+
+    @field_validator("action_args", mode="before")
+    @classmethod
+    def ensure_args_dict(cls, v):
+        """Convert None or non-dict action_args to empty dict."""
+        if v is None or not isinstance(v, dict):
+            return {}
+        return v
 
 class Observation(BaseModel):
     current_stream_chunk: Optional[str] = Field(
