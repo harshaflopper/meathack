@@ -40,9 +40,9 @@ This forces the AI to make the same tradeoffs a DevOps engineer faces daily: *wh
 
 ```
 ┌──────────────┐         ┌──────────────────┐
-│              │  HTTP    │                  │
-│  inference.py│────────► │  main.py (API)   │
-│  (LLM Agent) │ ◄────── │  FastAPI Server  │
+│              │  HTTP   │                  │
+│  inference.py│ ─────►  │  main.py (API)   │
+│  (LLM Agent) │ ◄─────  │  FastAPI Server  │
 │              │         │                  │
 └──────────────┘         └────────┬─────────┘
                                   │
