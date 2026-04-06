@@ -1,3 +1,13 @@
+---
+title: NeuroCache - LLM Memory Optimizer
+emoji: 🧠
+colorFrom: indigo
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # 🧠 LLM Memory Optimizer — DevOps Decision & Execution System
 
 > An OpenEnv-compliant AI agent environment where LLMs manage constrained memory while solving real-world DevOps problems — triaging emails, debugging configs, and performing incident response under strict resource limits.

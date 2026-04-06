@@ -13,6 +13,7 @@ STDOUT FORMAT:
 """
 
 import os
+import sys
 import json
 import requests
 import time
@@ -186,6 +187,12 @@ def run_task(client, task_idx, task_name):
 
 
 if __name__ == "__main__":
+    # Validate HF_TOKEN
+    if not HF_TOKEN:
+        print("[ERROR] HF_TOKEN is not set. Set it via environment variable.", file=sys.stderr)
+        print("[END] success=false steps=0 rewards=0.00")
+        sys.exit(1)
+
     client = get_client()
 
     task_names = [
