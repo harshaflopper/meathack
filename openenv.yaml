@@ -9,7 +9,7 @@ owner: agent
 type: API
 
 api:
-  base_url: http://localhost:7860
+  base_url: https://huggingface.co/spaces/Pavan11602/NeuroCache
   endpoints:
     reset:
       method: POST
