@@ -39,9 +39,11 @@ def read_root():
 
 
 @app.post("/reset", response_model=Observation)
-def reset_env(request: Optional[Dict[str, Any]] = Body(default=None)):
-    """Reset environment. Accepts empty body (defaults to task 0)."""
-    task_idx = request.get("task_idx", 0) if request else 0
+def reset_env(request: Optional[ResetRequest] = None):
+    """Reset environment. Accepts empty body (OpenEnv validator sends no body)."""
+    task_idx = 0
+    if request is not None and isinstance(request.task_idx, int):
+        task_idx = request.task_idx
     try:
         return env.reset(task_idx=task_idx)
     except Exception as e:
