@@ -1,6 +1,10 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Dict, Any, Optional, List
 
+class Reward(BaseModel):
+    value: float
+    message: str
+
 class Action(BaseModel):
     action_type: str = Field(
         ...,

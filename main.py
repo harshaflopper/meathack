@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Body
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
-from models import Action, Observation
+from models import Action, Observation, Reward
 from env import MemoryEnvironment
 
 app = FastAPI(title="LLM Memory Optimizer — DevOps Decision System")
@@ -16,7 +16,7 @@ class ResetRequest(BaseModel):
 
 class StepResponse(BaseModel):
     observation: Observation
-    reward: float
+    reward: Reward
     done: bool
     info: Dict[str, Any]
 
@@ -55,7 +55,8 @@ def reset_env(request: Optional[Dict[str, Any]] = Body(default=None)):
 @app.post("/step", response_model=StepResponse)
 def step_env(action: Action):
     try:
-        obs, reward, done, info = env.step(action)
+        obs, reward_val, done, info = env.step(action)
+        reward = Reward(value=reward_val, message=info.get("reward_message", "Step successful"))
         return StepResponse(observation=obs, reward=reward, done=done, info=info)
     except Exception as e:
         # NEVER crash — always return valid shape
@@ -63,9 +64,10 @@ def step_env(action: Action):
             fallback_obs = env._get_obs()
         except Exception:
             fallback_obs = env.reset(task_idx=env.current_task_idx)
+        reward = Reward(value=0.0, message=f"Error executing action: {str(e)}")
         return StepResponse(
             observation=fallback_obs,
-            reward=0.0,
+            reward=reward,
             done=False,
             info={"error": str(e)},
         )

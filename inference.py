@@ -203,7 +203,7 @@ def run_task_dummy(task_idx, task_name):
                     obs = obs if obs else {}  # safe fallback
 
             rewards_list.append(reward_val)
-            error_str = f'"{last_error}"' if last_error else "null"
+            error_str = last_error if last_error else "null"
             done_str = "true" if done else "false"
 
             print(
@@ -224,7 +224,7 @@ def run_task_dummy(task_idx, task_name):
     rewards_str = ",".join(f"{r:.2f}" for r in rewards_list)
     success_str = "true" if success else "false"
     print(
-        f"[END] success={success_str} steps={step_num} "
+        f"[END] success={success_str} steps={step_num} score={final_score:.2f} "
         f"rewards={rewards_str}"
     )
     return final_score
@@ -335,7 +335,7 @@ def run_task(client, task_idx, task_name):
             rewards_list.append(reward_val)
 
             # Determine error string
-            error_str = f'"{last_error}"' if last_error else "null"
+            error_str = last_error if last_error else "null"
             done_str = "true" if done else "false"
 
             # [STEP] line — mandatory format, ALWAYS emitted
@@ -361,7 +361,7 @@ def run_task(client, task_idx, task_name):
     rewards_str = ",".join(f"{r:.2f}" for r in rewards_list)
     success_str = "true" if success else "false"
     print(
-        f"[END] success={success_str} steps={step_num} "
+        f"[END] success={success_str} steps={step_num} score={final_score:.2f} "
         f"rewards={rewards_str}"
     )
 
