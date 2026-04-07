@@ -36,13 +36,13 @@ This forces the AI to make the same tradeoffs a DevOps engineer faces daily: *wh
 | `POST /reset` returns valid `Observation` | ✅ |
 | `POST /step` returns `{observation, reward, done, info}` | ✅ |
 | `GET /state` returns current state without stepping | ✅ |
-| `reward` is a flat `float` ∈ `[0.0, 1.0]` | ✅ |
+| `reward` is structured `Reward` object with `value` ∈ `[0.0, 1.0]` and `message` | ✅ |
 | All tasks and graders are **fully deterministic** (no randomness) | ✅ |
-| `inference.py` STDOUT follows `[START]`, `[STEP]`, `[END]` format | ✅ |
+| `inference.py` STDOUT follows `[START]`, `[STEP]`, `[END]` format with `score=` | ✅ |
 | Dockerfile builds and passes health check on port 7860 | ✅ |
 | All actions validated via Pydantic; invalid actions return safe penalty responses | ✅ |
 
-> **Note on STDOUT format**: Output strictly follows the OpenEnv validator format. No additional fields (e.g., `score=`) are included in the `[END]` line.
+> **Note on STDOUT format**: Output follows the OpenEnv validator format with the required `score=` field in the `[END]` line: `[END] success=... steps=... score=... rewards=...`
 
 ---
 
