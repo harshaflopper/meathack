@@ -9,7 +9,7 @@ owner: agent
 type: API
 
 api:
-  base_url: https://pavan11602-neurocache.hf.space
+  base_url: https://dudyalagurusreekar-neurocache.hf.space
   endpoints:
     reset:
       method: POST
