@@ -1,12 +1,162 @@
 name: llm_memory_optimizer
-description: Simulates an advanced multi-tiered AI Memory Management System (Fast Memory vs Disk) for training robust LLM context offloading.
-version: 2.0.0
+description: >
+  Real-world AI agent environment simulating DevOps debugging and memory management.
+  Agents must triage emails, debug configuration issues, and perform incident response
+  while managing a constrained fast memory context window. Supports real-world actions
+  including fix_config, restart_service, escalate_incident, and mark_email_important.
+version: 3.0.0
 owner: agent
 type: API
+
+api:
+  base_url: http://localhost:7860
+  endpoints:
+    reset:
+      method: POST
+      path: /reset
+      description: "Reset environment to initial state for a given task"
+      request_body:
+        task_idx:
+          type: integer
+          description: "Index of the task to load (0=easy, 1=medium, 2=hard)"
+      response: Observation
+    step:
+      method: POST
+      path: /step
+      description: "Execute one action and receive observation, reward, done, info"
+      request_body:
+        action_type:
+          type: string
+          description: "One of the allowed action types"
+        action_args:
+          type: object
+          description: "Arguments specific to action_type"
+      response: StepResponse
+    state:
+      method: GET
+      path: /state
+      description: "Get current environment state without stepping"
+      response: Observation
+    tasks:
+      method: GET
+      path: /tasks
+      description: "List all available tasks"
+      response: List[TaskInfo]
+
+action_space:
+  type: object
+  properties:
+    action_type:
+      type: string
+      enum:
+        - store_in_fast_memory
+        - offload_to_disk
+        - semantic_compress
+        - retrieve_from_disk
+        - submit_final_synthesis
+        - mark_email_important
+        - fix_config
+        - restart_service
+        - escalate_incident
+        - no_op
+      description: >
+        Memory management actions (store, offload, compress, retrieve) manage the
+        agent's constrained context window. Real-world actions (mark_email, fix_config,
+        restart_service, escalate) simulate actual DevOps decisions.
+    action_args:
+      type: object
+      description: >
+        Arguments depend on action_type:
+        - store_in_fast_memory: {content: string}
+        - offload_to_disk: {fast_memory_ids: string[]}
+        - semantic_compress: {fast_memory_ids: string[], summary: string}
+        - retrieve_from_disk: {query: string, limit: int}
+        - submit_final_synthesis: {answer: string, justification_ids: string[]}
+        - mark_email_important: {memory_id: string}
+        - fix_config: {target: string, new_value: string}
+        - restart_service: {service_name: string}
+        - escalate_incident: {summary: string, severity: string}
+        - no_op: {}
+
+observation_space:
+  type: object
+  properties:
+    current_stream_chunk:
+      type: string
+      nullable: true
+      description: "Latest data chunk from the task input stream"
+    attention_tokens_used:
+      type: integer
+      description: "Current fast memory usage in characters"
+    attention_capacity:
+      type: integer
+      description: "Maximum fast memory before OOM crash"
+    disk_storage_count:
+      type: integer
+      description: "Number of items on disk"
+    fast_memory_index:
+      type: object
+      description: "Contents of fast memory {id: content}"
+    disk_index_preview:
+      type: object
+      description: "Summary of disk contents {id: size_string}"
+    recent_disk_retrieval:
+      type: string
+      nullable: true
+      description: "Results from last disk query"
+    task_goal:
+      type: string
+      description: "What the agent must accomplish"
+    task_type:
+      type: string
+      description: "easy, medium, or hard"
+    cpu_cycles_left:
+      type: integer
+      description: "Remaining turns before timeout"
+    status_message:
+      type: string
+      description: "Last action result message"
+    partial_progress:
+      type: object
+      description: "Milestones achieved {name: bool}"
+    decision_log:
+      type: array
+      description: "Chronological decision history for explainability"
+    services_status:
+      type: object
+      description: "Status of simulated services {name: status}"
+
+reward:
+  type: float
+  range: [0.0, 1.0]
+  description: >
+    Structured reward combining correctness (0.3), efficiency (0.1),
+    memory optimization (0.1), partial milestones (0.15 each), and final
+    task success (1.0). Penalties for OOM (-0.2), wrong actions (-0.1),
+    and unnecessary escalation (-0.05).
+
 tasks:
   - name: email_triage_easy
-    description: "Email inbox parsing. Large attention limit but agent must index priority emails."
-  - name: codebase_debugging_medium
-    description: "Multi-file code triage. Extremely tight constraint. Requires active offloading of irrelevant files to find the configuration bug."
-  - name: infinite_incident_response_hard
-    description: "Continuous infinite-horizon anomaly stream. Requires aggressive semantic compression to maintain a functional timeline for root-cause synthesis."
+    difficulty: easy
+    description: >
+      Triage a realistic corporate inbox with 10 emails (spam, HR, security,
+      executive urgent). Agent must identify critical items, mark them important,
+      and synthesize required actions. Large attention capacity.
+    grading: "Partial credit based on answer coverage. Full marks for identifying all critical emails with justification."
+
+  - name: config_debugging_medium
+    difficulty: medium
+    description: >
+      Debug a failing staging deployment. Agent receives .env files, docker-compose
+      configs, application logs, and runbooks. Must identify the REDIS_HOST=localhost
+      misconfiguration, fix it, and restart services. Tight memory constraint.
+    grading: "Partial credit for finding config bug. Full marks for correct fix + restart + answer with justification."
+
+  - name: incident_response_hard
+    difficulty: hard
+    description: >
+      Root-cause analysis of a cascading production failure. Agent receives 25+
+      structured JSON logs showing load balancer failures, DB pool exhaustion,
+      OOMKill, and node eviction. Must compress logs, identify the chain of events,
+      and escalate. Extremely tight memory constraint.
+    grading: "Partial credit for each milestone discovered. Full marks for complete root-cause chain with evidence."
