@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from models import Action, Observation
 from env import MemoryEnvironment
 
@@ -39,9 +39,10 @@ def read_root():
 
 
 @app.post("/reset", response_model=Observation)
-def reset_env(request: ResetRequest):
+def reset_env(request: Optional[ResetRequest] = None):
+    task_idx = request.task_idx if request else 0
     try:
-        return env.reset(task_idx=request.task_idx)
+        return env.reset(task_idx=task_idx)
     except Exception as e:
         # Fallback: reset to task 0 on error
         try:
