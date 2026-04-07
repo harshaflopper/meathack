@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException, Body, Request
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 from models import Action, Observation, Reward
@@ -39,19 +39,18 @@ def read_root():
 
 
 @app.post("/reset", response_model=Observation)
-def reset_env(request: Optional[ResetRequest] = Body(default=None)):
-    """Reset environment. Accepts empty body (OpenEnv validator sends no body)."""
-    task_idx = 0
-    if request is not None and isinstance(request.task_idx, int):
-        task_idx = request.task_idx
+async def reset_env(request: Request):
+    """Bulletproof reset endpoint - handles empty body, null, invalid JSON."""
+    try:
+        body = await request.json()
+        task_idx = body.get("task_idx", 0) if body else 0
+    except Exception:
+        task_idx = 0  # handles empty or invalid JSON
+
     try:
         return env.reset(task_idx=task_idx)
-    except Exception as e:
-        # Fallback: reset to task 0 on error
-        try:
-            return env.reset(task_idx=0)
-        except Exception:
-            raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        return env.reset(task_idx=0)
 
 
 @app.post("/step", response_model=StepResponse)

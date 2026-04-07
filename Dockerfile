@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+# Force rebuild cache break - v3
+RUN echo "force rebuild v3 - bulletproof reset fix"
+
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
