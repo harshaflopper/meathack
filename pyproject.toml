@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-memory-optimizer"
+version = "3.0.0"
+description = "OpenEnv-compliant AI agent environment for DevOps debugging and memory management"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "MeatHack Team", email = "team@meathack.dev"}
+]
+keywords = ["ai", "agents", "devops", "memory-management", "openenv"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: System :: Systems Administration",
+]
+
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "pydantic>=2.5.0",
+    "requests>=2.31.0",
+    "openai>=1.3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/harshaflopper/meathack"
+Repository = "https://github.com/harshaflopper/meathack"
+Documentation = "https://github.com/harshaflopper/meathack/blob/memory-optimizer/README.md"
+"Bug Tracker" = "https://github.com/harshaflopper/meathack/issues"
+
+[project.scripts]
+llm-memory-optimizer = "main:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.yml", "*.md", "*.txt"]
