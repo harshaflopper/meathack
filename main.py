@@ -16,7 +16,7 @@ class ResetRequest(BaseModel):
 
 class StepResponse(BaseModel):
     observation: Observation
-    reward: Reward
+    reward: float
     done: bool
     info: Dict[str, Any]
 
@@ -39,7 +39,7 @@ def read_root():
 
 
 @app.post("/reset", response_model=Observation)
-def reset_env(request: Optional[ResetRequest] = None):
+def reset_env(request: Optional[ResetRequest] = Body(default=None)):
     """Reset environment. Accepts empty body (OpenEnv validator sends no body)."""
     task_idx = 0
     if request is not None and isinstance(request.task_idx, int):
@@ -58,18 +58,16 @@ def reset_env(request: Optional[ResetRequest] = None):
 def step_env(action: Action):
     try:
         obs, reward_val, done, info = env.step(action)
-        reward = Reward(value=reward_val, message=info.get("reward_message", "Step successful"))
-        return StepResponse(observation=obs, reward=reward, done=done, info=info)
+        return StepResponse(observation=obs, reward=reward_val, done=done, info=info)
     except Exception as e:
         # NEVER crash — always return valid shape
         try:
             fallback_obs = env._get_obs()
         except Exception:
             fallback_obs = env.reset(task_idx=env.current_task_idx)
-        reward = Reward(value=0.0, message=f"Error executing action: {str(e)}")
         return StepResponse(
             observation=fallback_obs,
-            reward=reward,
+            reward=0.0,
             done=False,
             info={"error": str(e)},
         )
