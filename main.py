@@ -66,13 +66,6 @@ async def reset_env(request: Request):
 @app.post("/step", response_model=StepResponse)
 def step_env(request: Optional[Dict[str, Any]] = Body(default=None)):
     try:
-<<<<<<< HEAD
-        obs, reward_val, done, info = env.step(action)
-        return StepResponse(observation=obs, reward=reward_val, done=done, info=info)
-
-=======
->>>>>>> 8a104fbacce92ed20e0fa971204599d5c3365616
-        # Construct action safely from raw dict to prevent 422 errors
         if not request:
             action = Action(action_type="no_op", action_args={})
         else:
