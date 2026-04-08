@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -51,6 +52,8 @@ exclude = ["tests*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml", "*.yml", "*.md", "*.txt"]
+=======
+>>>>>>> 8a104fbacce92ed20e0fa971204599d5c3365616
 [project]
 name = "neurocache-openenv"
 version = "3.0.0"
@@ -74,4 +77,7 @@ server = "server.app:main"
 [build-system]
 requires = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
+<<<<<<< HEAD
 
+=======
+>>>>>>> 8a104fbacce92ed20e0fa971204599d5c3365616
