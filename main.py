@@ -86,7 +86,7 @@ def step_env(request: Optional[Dict[str, Any]] = Body(default=None)):
             fallback_obs = env.reset(task_idx=env.current_task_idx)
         return StepResponse(
             observation=fallback_obs,
-            reward=0.0,
+            reward=0.0001,
             done=False,
             info={"error": str(e)},
         )

@@ -107,7 +107,7 @@ class MemoryEnvironment:
 
     def _check_partial_milestones(self) -> float:
         """Check if any partial milestones are newly achieved. Returns bonus reward."""
-        bonus = 0.0
+        bonus = 0.0001
         milestones = self.current_task.partial_milestones
         if not milestones:
             return bonus
@@ -134,31 +134,31 @@ class MemoryEnvironment:
             return 0.1
         elif ratio < 0.6:
             return 0.05
-        return 0.0
+        return 0.0001
 
     def _memory_optimization_bonus(self) -> float:
         """Reward staying well within memory capacity."""
         used = self._get_tokens_used()
         cap = self.current_task.attention_capacity
         if cap == 0:
-            return 0.0
+            return 0.0001
         ratio = used / cap
         if ratio < 0.5:
             return 0.1
         elif ratio < 0.8:
             return 0.05
-        return 0.0
+        return 0.0001
 
     def step(self, action: Action) -> Tuple[Observation, float, bool, Dict[str, Any]]:
         self.recent_disk_retrieval = None
-        reward_value = 0.0
+        reward_value = 0.0001
         reward_msg = ""
         done = False
 
         if self.is_done:
             return (
                 self._get_obs(),
-                0.0,
+                0.0001,
                 True,
                 {"error": "Episode already finished."},
             )
@@ -172,7 +172,7 @@ class MemoryEnvironment:
             self.is_done = done
             return (
                 self._get_obs(),
-                0.0,
+                0.0001,
                 done,
                 {"error": "Timeout."},
             )
@@ -214,7 +214,7 @@ class MemoryEnvironment:
             self.is_done = False
             return (
                 self._get_obs(),
-                0.0,  # Clamped: penalty signal is zero reward (not negative)
+                0.0001,  # Clamped: penalty signal is zero reward (not negative)
                 False,
                 {"error": f"Invalid action_type: {atype}"},
             )
@@ -489,25 +489,25 @@ class MemoryEnvironment:
                 )
 
             # Add efficiency and memory bonuses (only if justified)
-            eff_bonus = self._efficiency_bonus() if valid_just else 0.0
-            mem_bonus = self._memory_optimization_bonus() if valid_just else 0.0
+            eff_bonus = self._efficiency_bonus() if valid_just else 0.0001
+            mem_bonus = self._memory_optimization_bonus() if valid_just else 0.0001
 
-            if score == 1.0:
-                reward_value = min(1.0, 1.0 + eff_bonus + mem_bonus)
+            if score >= 0.99:
+                reward_value = min(0.9999, 0.9999 + eff_bonus + mem_bonus)
                 reward_msg = (
                     f"Task Success! Answer verified and justified. "
                     f"Efficiency bonus: {eff_bonus:.2f}, Memory bonus: {mem_bonus:.2f}"
                 )
                 self.status_message = "Synthesis Approved."
-            elif score > 0:
-                reward_value = min(1.0, score + eff_bonus + mem_bonus)
+            elif score > 0.0001:
+                reward_value = min(0.9999, score + eff_bonus + mem_bonus)
                 reward_msg = (
                     f"Task Partial Success (score={score:.2f}). "
                     f"Efficiency: {eff_bonus:.2f}, Memory: {mem_bonus:.2f}"
                 )
                 self.status_message = "Synthesis Partially Accepted."
             else:
-                reward_value = 0.0
+                reward_value = 0.0001
                 reward_msg = "Task Failed. Answer incorrect."
                 self.status_message = "Synthesis Denied."
 
