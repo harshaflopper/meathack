@@ -194,7 +194,7 @@ def run_task_dummy(task_idx, task_name):
                 reward_val = float(step_response["reward"])
                 done = step_response["done"]
             except Exception as step_err:
-                reward_val = 0.0
+                reward_val = 0.0001
                 done = False
                 last_error = str(step_err)
                 try:
@@ -217,9 +217,10 @@ def run_task_dummy(task_idx, task_name):
     except Exception as e:
         last_error = str(e)
         if not rewards_list:
-            rewards_list = [0.0]
+            rewards_list = [0.0001]
 
-    final_score = max(rewards_list) if rewards_list else 0.0
+    final_score = max(rewards_list) if rewards_list else 0.0001
+    final_score = max(0.0001, min(0.9999, final_score))
     success = final_score >= 0.5
     rewards_str = ",".join(f"{r:.2f}" for r in rewards_list)
     success_str = "true" if success else "false"
@@ -323,7 +324,7 @@ def run_task(client, task_idx, task_name):
                 done = step_response["done"]
             except Exception as step_err:
                 # API error (422, 500, network) — do NOT crash, log and continue
-                reward_val = 0.0
+                reward_val = 0.0001
                 done = False
                 last_error = str(step_err)
                 # Fetch fresh observation so LLM doesn't loop on stale state
@@ -347,15 +348,16 @@ def run_task(client, task_idx, task_name):
             messages.append({"role": "assistant", "content": json.dumps(action_dict)})
 
         # Score = best reward achieved; success = based on final step outcome
-        final_score = max(rewards_list) if rewards_list else 0.0
+        final_score = max(rewards_list) if rewards_list else 0.0001
+        final_score = max(0.0001, min(0.9999, final_score))
         success = bool(rewards_list and rewards_list[-1] >= 0.5)
 
     except Exception as e:
         last_error = str(e)
         if not rewards_list:
-            rewards_list = [0.0]
+            rewards_list = [0.0001]
         success = False
-        final_score = 0.0
+        final_score = 0.0001
 
     # [END] line — always emitted
     rewards_str = ",".join(f"{r:.2f}" for r in rewards_list)

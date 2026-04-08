@@ -557,8 +557,8 @@ class MemoryEnvironment:
         if not reward_msg:
             reward_msg = self.status_message
 
-        # Clamping to [0.0, 1.0]
-        reward_value = max(0.0, min(1.0, reward_value))
+        # Clamping to [0.0001, 0.9999]
+        reward_value = max(0.0001, min(0.9999, reward_value))
 
         info_dict = {"partial_progress": self.partial_progress.copy()}
         if reward_msg:
