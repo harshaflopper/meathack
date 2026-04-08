@@ -8,7 +8,7 @@ app_port: 7860
 pinned: false
 ---
 
-**🌐 Live Demo:** https://huggingface.co/spaces/dudyalagurusreekar/NeuroCache
+**🌐 Live Demo:** https://huggingface.co/spaces/Pavan11602/NeuroCache
 
 # 🧠 LLM Memory Optimizer — DevOps Decision & Execution System
 
