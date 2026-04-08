@@ -64,10 +64,24 @@ async def reset_env(request: Request):
 
 
 @app.post("/step", response_model=StepResponse)
-def step_env(action: Action):
+def step_env(request: Optional[Dict[str, Any]] = Body(default=None)):
     try:
         obs, reward_val, done, info = env.step(action)
         return StepResponse(observation=obs, reward=reward_val, done=done, info=info)
+
+        # Construct action safely from raw dict to prevent 422 errors
+        if not request:
+            action = Action(action_type="no_op", action_args={})
+        else:
+            # Manually validate to prevent Pydantic 422s from bubbling up unhandled
+            action_type = request.get("action_type", "no_op")
+            action_args = request.get("action_args", {})
+            if not isinstance(action_args, dict):
+                action_args = {}
+            action = Action(action_type=action_type, action_args=action_args)
+
+        obs, reward, done, info = env.step(action)
+        return StepResponse(observation=obs, reward=reward, done=done, info=info)
     except Exception as e:
         # NEVER crash — always return valid shape
         try:

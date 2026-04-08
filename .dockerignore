@@ -30,3 +30,9 @@ Thumbs.db
 
 # Documentation (not needed in container)
 implementation_plan.md
+walkthrough.md
+task.md
+
+# Scratch and test files
+test_fastapi.py
+.pytest_cache/

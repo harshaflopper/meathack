@@ -37,12 +37,15 @@ class Task:
         """Deterministic grader with controlled normalization.
         Uses regex on normalized strings to prevent partial-match exploits.
         """
+        def clamp_score(score: float) -> float:
+            return max(0.0001, min(0.9999, score))
+
         # Normalize: lowercase, strip dashes/underscores for safe comparison
         normalized = answer.lower().replace("-", "").replace("_", "")
 
         total = len(self.expected_answers)
         if total == 0:
-            return 0.0
+            return clamp_score(0.0)
 
         matches = 0
         for exp in self.expected_answers:
@@ -56,11 +59,13 @@ class Task:
         has_justification = len(justifications) > 0
 
         if correctness >= 0.8 and has_justification:
-            return 1.0
+            score = 1.0
         elif correctness >= 0.8 and not has_justification:
-            return 0.5
+            score = 0.5
         elif correctness >= 0.4 and has_justification:
-            return 0.3 + (correctness * 0.5)
+            score = 0.3 + (correctness * 0.5)
         elif correctness > 0:
-            return correctness * 0.4
-        return 0.0
+            score = correctness * 0.4
+        else:
+            score = 0.0
+        return clamp_score(score)
