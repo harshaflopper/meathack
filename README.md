@@ -38,13 +38,13 @@ This forces the AI to make the same tradeoffs a DevOps engineer faces daily: *wh
 | `POST /reset` returns valid `Observation` | ✅ |
 | `POST /step` returns `{observation, reward, done, info}` | ✅ |
 | `GET /state` returns current state without stepping | ✅ |
-| `reward` is structured `Reward` object with `value` ∈ `[0.0, 1.0]` and `message` | ✅ |
+| `reward` is structured `Reward` object strictly bounded to evaluate `(0, 1)` range endpoints excluding `0.0` and `1.0` (max ceiling `0.9999`) | ✅ |
 | All tasks and graders are **fully deterministic** (no randomness) | ✅ |
-| `inference.py` STDOUT follows `[START]`, `[STEP]`, `[END]` format with `score=` | ✅ |
+| `inference.py` STDOUT follows `[START]`, `[STEP]`, `[END]` format, locking clamp-safe precision formatting to `.4f` | ✅ |
 | Dockerfile builds and passes health check on port 7860 | ✅ |
 | All actions validated via Pydantic; invalid actions return safe penalty responses | ✅ |
 
-> **Note on STDOUT format**: Output follows the OpenEnv validator format with the required `score=` field in the `[END]` line: `[END] success=... steps=... score=... rewards=...`
+> **Note on STDOUT format**: Output strictly follows the OpenEnv validator format. No additional fields (e.g., `score=`) are included in the `[END]` line.
 
 ---
 
@@ -121,7 +121,9 @@ meathack/
 │   └── hard.py          ← Level 3: Incident Response
 ├── openenv.yaml         ← OpenEnv environment specification
 ├── Dockerfile           ← Container build instructions
-├── requirements.txt     ← Python dependencies
+├── pyproject.toml       ← Project definitions and uv tracking
+├── uv.lock              ← Exact reproducible uv lockfile
+├── requirements.txt     ← Python dependencies fallback
 ├── .gitignore           ← Files excluded from git
 └── .dockerignore        ← Files excluded from Docker build
 ```
@@ -142,7 +144,7 @@ Creates a FastAPI web server exposing the OpenEnv-required endpoints.
 | `GET /state` | Read state | Returns current environment state without stepping |
 | `GET /tasks` | List tasks | Shows all available tasks with name, difficulty, description |
 
-**Error handling**: All endpoints are wrapped in try/except blocks. If any internal error occurs, the endpoint returns a valid response structure with `reward=0.0` and an error message in `info` — designed to handle failures gracefully and avoid unhandled exceptions.
+**Bulletproof Error handling**: All endpoints are wrapped in robust default Pydantic parsers (like `Body(default=None)`). Missing elements gracefully resolve without strict REST 422 parser crashes. In cases of internal system logic failure, the endpoints default cleanly structure returning `reward=0.0001` with an `info` message — designed to guarantee no exceptions bubble up and the evaluator is continuously served without an explosion.
 
 ---
 
@@ -204,8 +206,8 @@ Connects to a real LLM (default: Qwen 72B via HuggingFace Router) and plays thro
 [START] task=email_triage_easy env=llm_memory_optimizer model=Qwen/Qwen2.5-72B-Instruct
 [STEP] step=1 action=store_in_fast_memory reward=0.05 done=false error=null
 [STEP] step=2 action=mark_email_important reward=0.30 done=false error=null
-[STEP] step=3 action=submit_final_synthesis reward=1.00 done=true error=null
-[END] success=true steps=3 rewards=0.05,0.30,1.00
+[STEP] step=3 action=submit_final_synthesis reward=0.9999 done=true error=null
+[END] success=true steps=3 score=0.9999 rewards=0.05,0.30,0.9999
 ```
 
 **Failure recovery**:
@@ -229,11 +231,11 @@ Defines the `Task` data structure and the `grade()` function.
 
 | Correctness | Has Justification? | Score |
 |:-:|:-:|:-:|
-| ≥ 80% | ✅ | **1.0** (full marks) |
-| ≥ 80% | ❌ | 0.5 |
-| ≥ 40% | ✅ | 0.3 + (correctness × 0.5) |
-| > 0% | ❌ | correctness × 0.4 |
-| 0% | — | 0.0 |
+| ≥ 80% | ✅ | **0.9999** (strictly bounded cap) |
+| ≥ 80% | ❌ | 0.5000 |
+| ≥ 40% | ✅ | min(0.9999, 0.3 + (correctness × 0.5)) |
+| > 0% | ❌ | max(0.0001, correctness × 0.4) |
+| 0% | — | 0.0001 |
 
 **Why `re.escape`**: Prevents regex injection attacks. The normalization is controlled — it only strips `-` and `_` characters, not arbitrary punctuation. This allows `"OOM-Killed"` to match `"OOMKilled"` while preventing partial-match exploits like `"oom"` matching `"oomkilled"` independently (since the expected answer is `"OOMKilled"` as a full term).
 
@@ -321,7 +323,7 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
 
 ## 🏆 Reward Structure
 
-Rewards are computed per-step and clamped to `[0.0, 1.0]`. Approximate ranges — exact values depend on action context:
+Rewards are computed per-step and clamped strictly to `[0.0001, 0.9999]`. Approximate ranges — exact values depend on action context:
 
 | Event | Reward Range | Trigger |
 |-------|:------:|---------|
@@ -334,7 +336,7 @@ Rewards are computed per-step and clamped to `[0.0, 1.0]`. Approximate ranges �
 | Restarted service after fix | ~+0.30 | Service was in `fix_pending_restart` state |
 | Escalated appropriately | ~+0.20 | Hard task or critical severity with detailed summary |
 | Discovered milestone | ~+0.15 | Stored content that matches milestone keywords |
-| Submitted correct answer | **1.0** | ≥80% keyword match with justification evidence |
+| Submitted correct answer | **0.9999** | ≥80% keyword match with justification evidence |
 | Memory overflow (OOM) | ~-0.20 | `attention_tokens_used > attention_capacity` |
 | Incorrect action | ~-0.05 to -0.10 | Wrong config key, unnecessary escalation |
 | Repeated no_op spam | ~-0.01 to -0.05 | 3+ consecutive no_ops (graduated penalty) |
@@ -353,7 +355,7 @@ Rewards are computed per-step and clamped to `[0.0, 1.0]`. Approximate ranges �
 | Agent spams `no_op` | Graduated penalty: -0.01 → -0.03 → -0.05 after 3+ consecutive |
 | Memory overflow | OOM penalty applied, input stream halted until space freed |
 | Stale observation after API error | Inference script fetches fresh state from `GET /state` |
-| Reward out of bounds | Clamped to `[0.0, 1.0]` via `max(0.0, min(1.0, value))` |
+| Reward out of bounds | Clamped strictly to `[0.0001, 0.9999]` via `max(0.0001, min(0.9999, value))` |
 
 ---
 
@@ -423,15 +425,17 @@ python inference.py
 ### Local Development
 ```bash
 # Terminal 1: Start the environment server
-pip install -r requirements.txt
-uvicorn main:app --host 127.0.0.1 --port 7860
+uv sync # Installs dependencies via modern uv lockfile
+# OR fallback: pip install -r requirements.txt
+
+uv run uvicorn main:app --host 127.0.0.1 --port 7860
 
 # Terminal 2: Run the AI agent (with LLM)
 export HF_TOKEN="your_huggingface_token"
-python inference.py
+uv run python inference.py
 
 # OR: Run deterministic dummy baseline (no API key required)
-python inference.py
+uv run python inference.py
 # → Automatically detects missing HF_TOKEN and runs pre-scripted actions
 ```
 
